@@ -1,19 +1,9 @@
 /* ============================================
    LIGHTHOUSE BEAM
    The lighthouse sits fixed in the bottom-right.
-   The lamp position is calculated in viewport coords.
-   As the user scrolls through sections, the beam
-   sweeps from upper-left (hero) to lower-left (contact).
+   The beam follows the mouse cursor — pointing from
+   the lamp toward wherever the mouse is on screen.
    ============================================ */
-
-// Angle presets per section (degrees, standard math: 0=right, 180=left)
-// All angles in the upper-left to lower-left quadrant
-const BEAM_ANGLES = {
-  hero:    -148,   // sweeping upper-left toward top content
-  about:   -163,   // slightly above horizontal-left
-  cases:   -175,   // nearly horizontal-left
-  contact: -193,   // below horizontal-left, toward footer
-};
 
 const SECTIONS = ['hero', 'about', 'cases', 'contact'];
 
@@ -25,8 +15,11 @@ const LH_LAMP_X   = 60 / 120; // lamp cx ratio in viewBox
 const LH_LAMP_Y   = 89 / 300; // lamp cy ratio in viewBox
 const BEAM_SPREAD = 22;   // half-angle of the beam cone (degrees)
 
-let currentAngle = BEAM_ANGLES.hero;
-let targetAngle  = BEAM_ANGLES.hero;
+// Default angle when no mouse has been detected yet (upper-left)
+const DEFAULT_ANGLE = -148;
+
+let currentAngle = DEFAULT_ANGLE;
+let targetAngle  = DEFAULT_ANGLE;
 let rafId        = null;
 
 // Get lamp position in viewport pixels
@@ -107,19 +100,23 @@ function setBeamAngle(angle) {
 }
 
 /* ============================================
-   SECTION OBSERVER — updates beam + nav
+   MOUSE TRACKING — beam follows cursor
+   ============================================ */
+window.addEventListener('mousemove', (e) => {
+  const lp  = lampPos();
+  const dx  = e.clientX - lp.x;
+  const dy  = e.clientY - lp.y;
+  const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+  setBeamAngle(angle);
+}, { passive: true });
+
+/* ============================================
+   SECTION OBSERVER — nav active state only
    ============================================ */
 const sectionObserver = new IntersectionObserver((entries) => {
   entries.forEach((entry) => {
     if (!entry.isIntersecting) return;
     const id = entry.target.id;
-
-    // Beam
-    if (BEAM_ANGLES[id] !== undefined) {
-      setBeamAngle(BEAM_ANGLES[id]);
-    }
-
-    // Nav active link
     document.querySelectorAll('.nav-links a').forEach((a) => {
       a.classList.toggle('active', a.getAttribute('href') === `#${id}`);
     });
