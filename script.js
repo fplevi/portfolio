@@ -101,13 +101,34 @@ function setBeamAngle(angle) {
 
 /* ============================================
    MOUSE TRACKING — beam follows cursor
+   Angle is clamped to the left-facing arc only:
+   from upper-left (top of viewport) sweeping
+   through straight-left down to lower-left
+   (bottom-left of viewport). The right-side arc
+   is forbidden so the beam stays on the content.
+
+   Valid zone:  -95° (up) → ±180° (left) → 175° (lower-left)
+   Forbidden:   -95° → 175° through 0° (right side)
    ============================================ */
+const MIN_ANGLE = -95;   // upper boundary  (beam points toward top of page)
+const MAX_ANGLE = 175;   // lower boundary  (beam points toward bottom-left)
+
+function clampAngle(angle) {
+  // Normalize to [-180, 180]
+  let a = ((angle + 180) % 360 + 360) % 360 - 180;
+  // If inside the forbidden right-side zone, snap to nearest boundary
+  if (a > MIN_ANGLE && a < MAX_ANGLE) {
+    return (a - MIN_ANGLE) < (MAX_ANGLE - a) ? MIN_ANGLE : MAX_ANGLE;
+  }
+  return a;
+}
+
 window.addEventListener('mousemove', (e) => {
-  const lp  = lampPos();
-  const dx  = e.clientX - lp.x;
-  const dy  = e.clientY - lp.y;
-  const angle = Math.atan2(dy, dx) * (180 / Math.PI);
-  setBeamAngle(angle);
+  const lp    = lampPos();
+  const dx    = e.clientX - lp.x;
+  const dy    = e.clientY - lp.y;
+  const raw   = Math.atan2(dy, dx) * (180 / Math.PI);
+  setBeamAngle(clampAngle(raw));
 }, { passive: true });
 
 /* ============================================
